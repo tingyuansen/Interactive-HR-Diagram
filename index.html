@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hertzsprung–Russell Diagram Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3">
+</head>
+
+<body>
+  <header>
+    <div class="hero-badges">
+      <span class="badge">Interactive</span>
+      <span class="badge">Stellar Evolution Studio</span>
+    </div>
+    <h1>Hertzsprung–Russell Diagram Studio</h1>
+    <p>
+      Explore how stars change across their lifetimes. Filter by evolutionary stage, surface temperature, mass, and
+      luminosity. Then dive into curated explanations to build intuition for stellar lifecycles.
+    </p>
+    <div class="guided">
+      <details open>
+        <summary>Guided walkthrough</summary>
+        <ul>
+          <li>Drag filters to highlight regions of the diagram — temperature decreases to the right.</li>
+          <li>Toggle evolutionary tracks to compare lifetimes for different masses.</li>
+          <li>Scrub through time to follow a single star from protostar to white dwarf.</li>
+          <li>Use the glossary tab to decode key vocabulary along the way.</li>
+        </ul>
+      </details>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" id="controls">
+      <h2>Explorer Controls</h2>
+      <div class="control-group">
+        <label>Evolutionary stages</label>
+        <div class="multiselect" id="stage-filters">
+          <!-- Chips inserted via JS -->
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="temp-range">Temperature range (K)</label>
+        <input id="temp-range" type="range" min="2000" max="40000" value="15000" step="100">
+        <div class="metric" style="margin-top:0.8rem;">
+          <strong>Upper limit</strong>
+          <span><span id="temp-value">15000</span> K</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="lum-range">Luminosity range (log L☉)</label>
+        <input id="lum-range" type="range" min="-4" max="4.5" value="4" step="0.5">
+        <div class="metric" style="margin-top:0.8rem;">
+          <strong>Upper limit</strong>
+          <span><span id="lum-value">4.0</span></span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="mass-range">Max mass (M☉)</label>
+        <input id="mass-range" type="range" min="0.1" max="25" value="20" step="0.1">
+        <div class="metric" style="margin-top:0.8rem;">
+          <strong>Upper limit</strong>
+          <span><span id="mass-value">20.0</span> M☉</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="highlight-stage">Highlight stage callout</label>
+        <select id="highlight-stage"></select>
+      </div>
+
+      <a class="download" id="download-btn" download="hr_diagram_selection.csv" href="#">Download selection</a>
+    </aside>
+
+    <section>
+      <div class="panel">
+        <h2>Interactive HR Diagram</h2>
+        <div id="hr-plot"></div>
+        <div class="legend" id="legend"></div>
+        <div class="callout" id="stage-callout"></div>
+      </div>
+
+      <div class="panel tabs">
+        <div class="tab-nav">
+          <button class="tab-button active" data-tab="tracks">Evolution tracks</button>
+          <button class="tab-button" data-tab="lifetime">Lifetime explorer</button>
+          <button class="tab-button" data-tab="glossary">Glossary</button>
+        </div>
+        <div class="tab-content" id="tab-tracks">
+          <p style="color:var(--muted); margin-bottom:1rem;">
+            Compare stellar tracks across the HR diagram. High-mass stars blaze brightly but live fast; smaller stars simmer
+            for ages.
+          </p>
+          <div class="track-controls" id="track-controls"></div>
+          <div id="tracks-plot" style="width:100%; aspect-ratio:1.5 / 1;"></div>
+          <div style="overflow-x:auto; margin-top:1.5rem;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mass (M☉)</th>
+                  <th>Pre-main sequence (Myr)</th>
+                  <th>Main sequence (Myr)</th>
+                  <th>Red giant (Myr)</th>
+                  <th>White dwarf cooling (Myr)</th>
+                </tr>
+              </thead>
+              <tbody id="lifetime-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-lifetime" hidden>
+          <p style="color:var(--muted); margin-bottom:1rem;">
+            Follow a single star as it evolves. Drag the slider to watch how its temperature and luminosity change with age.
+          </p>
+          <div class="control-group" style="margin-bottom:1.2rem;">
+            <label for="track-mass">Choose star mass (M☉)</label>
+            <select id="track-mass"></select>
+          </div>
+          <input id="age-slider" type="range" min="10" max="13000" value="6500" step="10">
+          <div class="metrics" id="track-metrics"></div>
+        </div>
+        <div class="tab-content" id="tab-glossary" hidden>
+          <div class="glossary" id="glossary"></div>
+          <p style="margin-top:1.5rem; color:var(--muted);">
+            Learn more from <a href="https://openstax.org/details/books/astronomy" target="_blank" rel="noopener">OpenStax Astronomy</a>
+            or the <a href="https://www.esa.int/Science_Exploration/Space_Science/Hipparcos/Animations_and_explorations"
+              target="_blank" rel="noopener">ESA HR Diagram Explorer</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Data generated procedurally for teaching purposes • Built with D3.js &amp; love for stellar astrophysics</span>
+    <a href="mailto:astro@learning.studio">Share feedback</a>
+  </footer>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" defer></script>
+  <script src="app.js?v=3" defer></script>
+</body>
+
+</html>
+
