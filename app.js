@@ -2,32 +2,32 @@ const stages = [
   {
     key: "Pre-Main Sequence",
     description: "Protostars contracting before stable hydrogen fusion.",
-    color: "#88CCEE",
+    color: "#6AAAE2",
   },
   {
     key: "Main Sequence",
     description: "Stars stably fusing hydrogen in their cores.",
-    color: "#44AA99",
+    color: "#02B5A0",
   },
   {
     key: "Subgiant",
     description: "Hydrogen is exhausted; outer layers expand slightly.",
-    color: "#117733",
+    color: "#2A7E7B",
   },
   {
     key: "Red Giant",
     description: "Outer layers balloon as shell burning dominates.",
-    color: "#DDCC77",
+    color: "#FF8A5C",
   },
   {
     key: "Horizontal Branch",
     description: "Helium fusion stabilizes the core again.",
-    color: "#CC6677",
+    color: "#E85C93",
   },
   {
     key: "White Dwarf",
     description: "Degenerate remnant cooling over billions of years.",
-    color: "#AA4499",
+    color: "#BBB5FF",
   },
 ];
 
@@ -145,6 +145,24 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  function dataBounds() {
+    const temp = d3.extent(catalog, (d) => d.temperature);
+    const lum = d3.extent(catalog, (d) => d.luminosity);
+    return {
+      tempMin: Math.floor(temp[0] / 100) * 100,
+      tempMax: Math.ceil(temp[1] / 100) * 100,
+      lumMin: lum[0],
+      lumMax: lum[1],
+    };
+  }
+
+  const bounds = dataBounds();
+
+  const bubbleColorScale = d3.scaleLinear()
+    .domain([bounds.lumMin, Math.pow(10, 1.5), bounds.lumMax])
+    .range(['rgba(10, 25, 74, 0.35)', 'rgba(2, 181, 160, 0.65)', 'rgba(255, 161, 95, 0.8)'])
+    .clamp(true);
+
   function buildHRDiagram(data) {
     const container = d3.select('#hr-plot');
     container.selectAll('*').remove();
@@ -155,9 +173,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const svg = container.append('svg')
       .attr('width', width)
-      .attr('height', height);
+      .attr('height', height)
+      .style('background', 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(238,241,249,0.9) 100%)');
 
-    const margin = { top: 35, right: 30, bottom: 60, left: 75 };
+    const margin = { top: 40, right: 24, bottom: 60, left: 80 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -165,27 +184,32 @@ document.addEventListener('DOMContentLoaded', () => {
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     const x = d3.scaleLinear()
-      .domain([40000, 2500])
+      .domain([bounds.tempMax + 2000, Math.max(bounds.tempMin - 200, 2500)])
       .range([0, innerWidth]);
 
     const y = d3.scaleLog()
-      .domain([Math.pow(10, -4), Math.pow(10, 4.5)])
+      .domain([Math.pow(10, -2.5), bounds.lumMax * 1.2])
       .range([innerHeight, 0]);
 
     const xAxis = d3.axisBottom(x)
-      .tickFormat(d => `${d / 1000}K`)
-      .ticks(5);
+      .tickFormat(d => `${Math.round(d / 100) / 10}k`)
+      .ticks(width < 720 ? 4 : 7);
 
     const yAxis = d3.axisLeft(y)
-      .ticks(6, d3.format('.0f'));
+      .ticks(6, d3.format('.1f'));
 
     const grid = g.append('g');
     const gridHorizontal = grid.append('g').attr('class', 'grid-horizontal');
     const gridVertical = grid.append('g').attr('class', 'grid-vertical');
 
     const styleAxis = (selection) => {
-      selection.selectAll('text').attr('fill', '#5a5b72');
-      selection.selectAll('path, line').attr('stroke', 'rgba(0,0,0,0.2)');
+      selection.selectAll('text')
+        .attr('fill', '#4A4D6A')
+        .attr('font-size', 12)
+        .attr('font-weight', 500);
+      selection.selectAll('path, line')
+        .attr('stroke', 'rgba(38, 49, 94, 0.25)')
+        .attr('stroke-width', 0.9);
     };
 
     const xAxisGroup = g.append('g')
@@ -199,24 +223,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     svg.append('text')
       .attr('x', margin.left + innerWidth / 2)
-      .attr('y', height - 15)
+      .attr('y', height - 18)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#4f5070')
-      .attr('font-size', 12)
+      .attr('fill', '#28304F')
+      .attr('font-size', 13)
+      .attr('font-weight', 600)
       .text('Surface Temperature (K)');
 
     svg.append('text')
       .attr('transform', 'rotate(-90)')
-      .attr('y', 18)
+      .attr('y', 22)
       .attr('x', -height / 2)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#4f5070')
-      .attr('font-size', 12)
-      .text('Luminosity (log scale) [L☉]');
+      .attr('fill', '#28304F')
+      .attr('font-size', 13)
+      .attr('font-weight', 600)
+      .text('Luminosity (log L☉)');
 
     const radiusScale = d3.scaleSqrt()
-      .domain(d3.extent(data, d => d.mass))
-      .range([4, 16]);
+      .domain(d3.extent(catalog, d => d.mass))
+      .range([4, 18]);
 
     const points = g.append('g')
       .selectAll('circle')
@@ -225,11 +251,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .attr('cx', d => x(d.temperature))
       .attr('cy', d => y(d.luminosity))
       .attr('r', d => radiusScale(d.mass))
-      .attr('fill', d => stages.find(s => s.key === d.stage)?.color || '#888')
-      .attr('fill-opacity', 0.75)
-      .attr('stroke', 'rgba(255,255,255,0.8)')
-      .attr('stroke-width', 1.1)
-      .style('mix-blend-mode', 'multiply')
+      .attr('fill', (d) => bubbleColorScale(d.luminosity))
+      .attr('fill-opacity', 0.85)
+      .attr('stroke', (d) => stageColor[d.stage] || '#1C2746')
+      .attr('stroke-width', 1.15)
+      .style('filter', 'drop-shadow(0 4px 10px rgba(32, 35, 54, 0.2))')
       .on('mousemove', (event, d) => {
         tooltip.innerHTML = `
           <strong>${d.stage}</strong><br>
@@ -441,9 +467,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const svg = container.append('svg')
       .attr('width', width)
-      .attr('height', height);
+      .attr('height', height)
+      .style('background', 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(241,244,252,0.95) 100%)');
 
-    const margin = { top: 20, right: 30, bottom: 40, left: 70 };
+    const margin = { top: 26, right: 26, bottom: 50, left: 80 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
     const plotRoot = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
@@ -451,12 +478,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = d3.scaleLinear().domain([40000, 2500]).range([0, innerWidth]);
     const y = d3.scaleLog().domain([Math.pow(10, -4), Math.pow(10, 4)]).range([innerHeight, 0]);
 
-    const xAxis = d3.axisBottom(x).ticks(5);
-    const yAxis = d3.axisLeft(y).ticks(5, d3.format('.0f'));
+    const xAxis = d3.axisBottom(x).ticks(width < 720 ? 4 : 7);
+    const yAxis = d3.axisLeft(y).ticks(5, d3.format('.1f'));
 
     const styleAxis = (selection) => {
-      selection.selectAll('text').attr('fill', '#5a5b72');
-      selection.selectAll('path, line').attr('stroke', 'rgba(0,0,0,0.2)');
+      selection.selectAll('text')
+        .attr('fill', '#4A4D6A')
+        .attr('font-size', 12)
+        .attr('font-weight', 500);
+      selection.selectAll('path, line')
+        .attr('stroke', 'rgba(34, 40, 76, 0.25)')
+        .attr('stroke-width', 0.9);
     };
 
     const xAxisGroup = plotRoot.append('g').attr('transform', `translate(0,${innerHeight})`).call(xAxis);
@@ -485,25 +517,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const lineGen = d3.line()
         .x((d) => scaleX(d.temperature))
         .y((d) => scaleY(d.luminosity))
-        .curve(d3.curveCatmullRom.alpha(0.6));
+        .curve(d3.curveCatmullRom.alpha(0.5));
 
       tracks.select('path.track-line')
         .attr('fill', 'none')
-        .attr('stroke', stageColor['Main Sequence'] || '#44AA99')
-        .attr('stroke-width', 2.5)
-        .attr('opacity', 0.4)
+        .attr('stroke', '#6AAAE2')
+        .attr('stroke-width', 2.8)
+        .attr('opacity', 0.5)
         .attr('d', (d) => lineGen(d.data));
 
       tracks.select('g.track-points').each(function (d) {
         d3.select(this)
           .selectAll('circle')
-          .data(d.data.filter((_, i) => i % 6 === 0))
+          .data(d.data.filter((_, i) => i % 7 === 0))
           .join('circle')
-          .attr('r', 3.6)
-          .attr('fill', (p) => stageColor[p.stage] || '#777')
+          .attr('r', 3.8)
+          .attr('fill', (p) => stageColor[p.stage] || '#5F63FF')
           .attr('stroke', 'white')
-          .attr('stroke-width', 1.5)
+          .attr('stroke-width', 1.6)
           .style('mix-blend-mode', 'multiply')
+          .style('filter', 'drop-shadow(0 4px 9px rgba(12, 20, 58, 0.18))')
           .attr('cx', (p) => scaleX(p.temperature))
           .attr('cy', (p) => scaleY(p.luminosity))
           .on('mousemove', (event, p) => {
